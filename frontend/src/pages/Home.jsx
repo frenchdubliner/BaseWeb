@@ -1,0 +1,37 @@
+import { Link } from "react-router-dom";
+
+import { useAuth } from "../context/AuthContext";
+
+export default function Home() {
+  const { user } = useAuth();
+
+  return (
+    <div className="page page-narrow">
+      <h1>Welcome to BaseWeb</h1>
+      <p>A production-grade starting point with secure authentication built in.</p>
+
+      {user ? (
+        <div className="card">
+          <p>
+            You are signed in as <strong>{user.email}</strong>.
+          </p>
+          {!user.is_active && (
+            <p className="form-hint">Your account is still pending email verification.</p>
+          )}
+          <Link className="button" to="/profile">
+            Go to your profile
+          </Link>
+        </div>
+      ) : (
+        <div className="card">
+          <Link className="button" to="/login">
+            Login
+          </Link>
+          <Link className="button button-secondary" to="/register">
+            Create an account
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}

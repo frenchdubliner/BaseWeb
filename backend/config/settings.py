@@ -218,7 +218,13 @@ CSRF_COOKIE_SAMESITE = "Lax"
 if IS_PRODUCTION:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = True
+    # Defaults to True (correct once a real TLS-terminating proxy/domain is
+    # in front of the app), but must be overridable: this repo's own
+    # docker-compose.yml does not terminate TLS anywhere, so forcing this
+    # unconditionally would redirect every request to a non-existent https
+    # listener and break the app outright. Set SECURE_SSL_REDIRECT=False in
+    # .env for plain-HTTP deployments (e.g. local Docker testing).
+    SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", default=True)
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
@@ -240,7 +246,7 @@ X_FRAME_OPTIONS = "DENY"
 # CSP (django-csp)
 # ---------------------------------------------------------------------------
 CSP_DEFAULT_SRC = ("'self'",)
-CSP_SCRIPT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'", "https://challenges.cloudflare.com", "https://www.google.com", "https://www.gstatic.com")
 CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
 CSP_IMG_SRC = ("'self'", "data:")
 CSP_FONT_SRC = ("'self'",)

@@ -50,6 +50,17 @@ class CSVTemplateDownloadTests(APITestCase):
         self.assertEqual(upload_response.data["error_count"], 0)
         self.assertEqual(upload_response.data["created_count"], 10)
 
+        pandemic = GameListing.objects.get(game_name="Pandemic")
+        self.assertEqual(pandemic.missing_pieces_description, "Missing 2 blue infection cubes")
+        self.assertEqual(pandemic.comments, "Ask about bundle discount")
+
+        monopoly = GameListing.objects.get(game_name__startswith="Monopoly")
+        self.assertEqual(monopoly.missing_pieces_description, "Missing dog token, 3 houses")
+
+        catan = GameListing.objects.get(game_name="Catan")
+        self.assertEqual(catan.missing_pieces_description, "")
+        self.assertEqual(catan.comments, "Great starter game - highly recommend")
+
 
 class CSVBulkUploadTests(APITestCase):
     def setUp(self):

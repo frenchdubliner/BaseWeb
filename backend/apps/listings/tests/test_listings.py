@@ -118,3 +118,47 @@ class GameListingTests(APITestCase):
         response = self.client.delete(self.detail_url(listing.pk))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertTrue(GameListing.objects.filter(pk=listing.pk).exists())
+
+    def test_missing_pieces_description_is_saved(self):
+        self._login("seller@example.com")
+        response = self.client.post(
+            self.list_url,
+            listing_payload(has_missing_pieces=True, missing_pieces_description="2 red meeples, 1 die"),
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(response.data["missing_pieces_description"], "2 red meeples, 1 die")
+
+    def test_missing_pieces_description_cleared_when_unchecked(self):
+        self._login("seller@example.com")
+        response = self.client.post(
+            self.list_url,
+            listing_payload(has_missing_pieces=False, missing_pieces_description="should be dropped"),
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(response.data["missing_pieces_description"], "")
+
+    def test_missing_pieces_description_over_64_chars_rejected(self):
+        self._login("seller@example.com")
+        response = self.client.post(
+            self.list_url,
+            listing_payload(has_missing_pieces=True, missing_pieces_description="x" * 65),
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("missing_pieces_description", response.data)
+
+    def test_comments_field_saved(self):
+        self._login("seller@example.com")
+        response = self.client.post(
+            self.list_url, listing_payload(comments="Great condition, smoke-free home"), format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(response.data["comments"], "Great condition, smoke-free home")
+
+    def test_comments_over_64_chars_rejected(self):
+        self._login("seller@example.com")
+        response = self.client.post(self.list_url, listing_payload(comments="x" * 65), format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("comments", response.data)

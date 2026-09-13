@@ -297,7 +297,10 @@ issue a certificate for `localhost` or a bare IP address).
   it simply doesn't exist as far as the endpoint is concerned (404),
   which avoids leaking whether a given listing ID belongs to someone
   else. Requires `IsVerified`, same as the rest of the authenticated app.
-  Frontend page: `/my-games`.
+  Fields include an optional `missing_pieces_description` (shown in the UI
+  only when "has missing pieces" is checked, and cleared server-side if
+  that box is unchecked) and an optional `comments` field - both capped at
+  64 characters. Frontend page: `/my-games`.
 - **CSV bulk import** (`apps/listings/csv_import.py`): `GET
   /api/listings/csv-template/` downloads a heavily-commented example CSV
   (`#`-prefixed lines are documentation and are skipped by the importer);

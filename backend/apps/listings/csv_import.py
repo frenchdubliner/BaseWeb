@@ -50,9 +50,11 @@ def normalize_row(raw_row: dict) -> dict:
         "price": (raw_row.get("price") or "").strip(),
         "condition": _normalize_choice(raw_row.get("condition"), GameCondition),
         "has_missing_pieces": parse_bool(raw_row.get("has_missing_pieces")),
+        "missing_pieces_description": (raw_row.get("missing_pieces_description") or "").strip(),
         "smoking_household": parse_bool(raw_row.get("smoking_household")),
         "musty_smell": parse_bool(raw_row.get("musty_smell")),
         "pet_exposure": _normalize_choice(raw_row.get("pet_exposure"), PetExposure),
+        "comments": (raw_row.get("comments") or "").strip(),
     }
 
 
@@ -108,24 +110,39 @@ TEMPLATE_CSV = """# BaseWeb Game Listing Import Template
 #                                          (worn but playable, box/book show
 #                                           damage and/or significantly marked)
 #   has_missing_pieces   TRUE or FALSE. Optional, defaults to FALSE.
+#   missing_pieces_description
+#                        Text, max 64 characters. Optional. Only
+#                        meaningful when has_missing_pieces is TRUE, e.g.
+#                        "Missing 2 red meeples, 1 die". Ignored (cleared)
+#                        if has_missing_pieces is FALSE.
 #   smoking_household    TRUE or FALSE. Optional, defaults to FALSE.
 #   musty_smell          TRUE or FALSE. Optional, defaults to FALSE.
 #   pet_exposure         One of: cat, dog, multiple. Leave blank if the
 #                         game was never exposed to any pets.
+#   comments             Text, max 64 characters. Optional. Any other
+#                         notes about this listing.
+#
+# A FEW CSV BASICS
+#   - The first row must be the header (the column names) - don't delete
+#     it, only replace the example data rows beneath it.
+#   - If a value itself contains a comma, wrap the whole value in double
+#     quotes, e.g. "Missing 1 die, 2 tokens".
+#   - Leaving a value blank between two commas (like the pet_exposure
+#     column in most rows below) means "no value" for that column.
 #
 # LIMITS
 #   Up to 500 rows per upload. Rows with errors are skipped and reported
 #   individually - valid rows in the same file are still imported.
 #
-game_name,price,condition,has_missing_pieces,smoking_household,musty_smell,pet_exposure
-Catan,25.00,very_good,FALSE,FALSE,FALSE,cat
-Ticket to Ride,18.50,good,FALSE,FALSE,FALSE,
-Pandemic,12.00,fair,TRUE,FALSE,FALSE,dog
-Monopoly (Vintage 1970s Edition),8.00,poor,TRUE,TRUE,TRUE,multiple
-Azul,30.00,like_new,FALSE,FALSE,FALSE,
-Wingspan,45.00,new_in_shrink,FALSE,FALSE,FALSE,
-Carcassonne,20.00,good,FALSE,FALSE,FALSE,dog
-Gloomhaven,60.00,very_good,FALSE,TRUE,FALSE,
-Codenames,10.00,fair,FALSE,FALSE,TRUE,cat
-Risk,5.00,poor,TRUE,FALSE,FALSE,
+game_name,price,condition,has_missing_pieces,missing_pieces_description,smoking_household,musty_smell,pet_exposure,comments
+Catan,25.00,very_good,FALSE,,FALSE,FALSE,cat,Great starter game - highly recommend
+Ticket to Ride,18.50,good,FALSE,,FALSE,FALSE,,Kids love this one
+Pandemic,12.00,fair,TRUE,Missing 2 blue infection cubes,FALSE,FALSE,dog,Ask about bundle discount
+Monopoly (Vintage 1970s Edition),8.00,poor,TRUE,"Missing dog token, 3 houses",TRUE,TRUE,multiple,Vintage edition - collectors item
+Azul,30.00,like_new,FALSE,,FALSE,FALSE,,Barely played once
+Wingspan,45.00,new_in_shrink,FALSE,,FALSE,FALSE,,Still sealed - perfect gift
+Carcassonne,20.00,good,FALSE,,FALSE,FALSE,dog,Comes with one expansion
+Gloomhaven,60.00,very_good,FALSE,,TRUE,FALSE,,Heavy box - large and heavy
+Codenames,10.00,fair,FALSE,,FALSE,TRUE,cat,Great for game night
+Risk,5.00,poor,TRUE,Missing 1 red army piece,FALSE,FALSE,,Classic but well loved
 """

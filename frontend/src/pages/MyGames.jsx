@@ -8,9 +8,11 @@ const emptyForm = {
   price: "",
   condition: GAME_CONDITIONS[0].value,
   has_missing_pieces: false,
+  missing_pieces_description: "",
   smoking_household: false,
   musty_smell: false,
   pet_exposure: "",
+  comments: "",
 };
 
 function conditionLabel(value) {
@@ -50,7 +52,13 @@ export default function MyGames() {
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
-    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: type === "checkbox" ? checked : value };
+      if (name === "has_missing_pieces" && !checked) {
+        next.missing_pieces_description = "";
+      }
+      return next;
+    });
   };
 
   const startEdit = (listing) => {
@@ -60,9 +68,11 @@ export default function MyGames() {
       price: listing.price,
       condition: listing.condition,
       has_missing_pieces: listing.has_missing_pieces,
+      missing_pieces_description: listing.missing_pieces_description,
       smoking_household: listing.smoking_household,
       musty_smell: listing.musty_smell,
       pet_exposure: listing.pet_exposure,
+      comments: listing.comments,
     });
     setFormError("");
   };
@@ -209,6 +219,20 @@ export default function MyGames() {
           Has missing pieces?
         </label>
 
+        {form.has_missing_pieces && (
+          <label>
+            Which piece(s) are missing?
+            <input
+              type="text"
+              name="missing_pieces_description"
+              maxLength={64}
+              placeholder="e.g. 2 red meeples, 1 die"
+              value={form.missing_pieces_description}
+              onChange={handleChange}
+            />
+          </label>
+        )}
+
         <label className="checkbox-label">
           <input
             type="checkbox"
@@ -238,6 +262,18 @@ export default function MyGames() {
               </option>
             ))}
           </select>
+        </label>
+
+        <label>
+          Comments
+          <input
+            type="text"
+            name="comments"
+            maxLength={64}
+            placeholder="Any other notes about this listing"
+            value={form.comments}
+            onChange={handleChange}
+          />
         </label>
 
         {formError && <p className="form-error">{formError}</p>}
@@ -322,11 +358,17 @@ export default function MyGames() {
             </div>
             <p className="form-hint">{conditionLabel(listing.condition)}</p>
             <ul className="listing-flags">
-              {listing.has_missing_pieces && <li>Missing pieces</li>}
+              {listing.has_missing_pieces && (
+                <li>
+                  Missing pieces
+                  {listing.missing_pieces_description ? `: ${listing.missing_pieces_description}` : ""}
+                </li>
+              )}
               {listing.smoking_household && <li>Smoking household</li>}
               {listing.musty_smell && <li>Musty smell</li>}
               {listing.pet_exposure && <li>Pet exposure: {petExposureLabel(listing.pet_exposure)}</li>}
             </ul>
+            {listing.comments && <p className="form-hint">&quot;{listing.comments}&quot;</p>}
             <div>
               <button type="button" className="button" onClick={() => startEdit(listing)}>
                 Edit

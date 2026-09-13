@@ -47,6 +47,12 @@ class GameListing(models.Model):
     )
     condition = models.CharField(_("condition"), max_length=20, choices=GameCondition.choices)
     has_missing_pieces = models.BooleanField(_("has missing pieces"), default=False)
+    missing_pieces_description = models.CharField(
+        _("missing pieces description"),
+        max_length=64,
+        blank=True,
+        help_text=_("Which piece(s) are missing, e.g. \"2 red meeples, 1 die\"."),
+    )
     smoking_household = models.BooleanField(_("exposed to smoking household"), default=False)
     musty_smell = models.BooleanField(_("has musty smell"), default=False)
     pet_exposure = models.CharField(
@@ -56,6 +62,7 @@ class GameListing(models.Model):
         blank=True,
         help_text=_("Leave blank if the game was not exposed to any pets."),
     )
+    comments = models.CharField(_("comments"), max_length=64, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

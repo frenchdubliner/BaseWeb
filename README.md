@@ -7,7 +7,8 @@ verification, audit logging, geo/IP restrictions, and hardened defaults.
 
 - **Backend**: Django 5 + Django REST Framework, JWT auth (SimpleJWT), a
   custom email-based User model, `apps/accounts`, `apps/audit`,
-  `apps/security`.
+  `apps/security`, `apps/listings` (game-for-sale listings, CRUD scoped to
+  the owning user).
 - **Frontend**: React 18 + React Router 7 + Axios (Vite).
 - **Database**: SQLite in development, PostgreSQL in production.
 - **Reverse proxy**: NGINX, serving the built frontend and proxying
@@ -290,6 +291,24 @@ issue a certificate for `localhost` or a bare IP address).
   IP whitelist via `AdminSecuritySettings`, short session lifetime.
 - **Fail-secure config**: `config/env.py` raises `ImproperlyConfigured`
   at startup if a required production variable is missing.
+- **Game listings** (`apps/listings`): `/api/listings/` is a standard REST
+  CRUD resource (`GameListingViewSet`), but its queryset is always
+  filtered to `owner=request.user` - another user's listing doesn't 403,
+  it simply doesn't exist as far as the endpoint is concerned (404),
+  which avoids leaking whether a given listing ID belongs to someone
+  else. Requires `IsVerified`, same as the rest of the authenticated app.
+  Frontend page: `/my-games`.
+- **CSV bulk import** (`apps/listings/csv_import.py`): `GET
+  /api/listings/csv-template/` downloads a heavily-commented example CSV
+  (`#`-prefixed lines are documentation and are skipped by the importer);
+  `POST /api/listings/bulk-upload/` (multipart, field name `file`, max 500
+  rows, throttled at `listings-bulk-upload`: 20/hour) creates one listing
+  per row for the uploading user. Best-effort, not all-or-nothing: valid
+  rows are imported even if others fail, and every failure is reported
+  with its row number and field errors. Accepts either the stored choice
+  code (`very_good`) or its plain-English label (`Very Good`) for
+  `condition`/`pet_exposure`, and tolerant boolean parsing
+  (`TRUE`/`yes`/`1`/blank) for the checkbox columns.
 
 ## Two separate `.env` files - don't mix them up
 

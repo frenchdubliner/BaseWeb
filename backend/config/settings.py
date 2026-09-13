@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.audit",
     "apps.security",
+    "apps.listings",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -283,6 +284,7 @@ REST_FRAMEWORK = {
         "login": "20/hour",
         "password-reset": "10/hour",
         "resend-verification": "10/hour",
+        "listings-bulk-upload": "20/hour",
     },
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
 }

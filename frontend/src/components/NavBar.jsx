@@ -19,6 +19,7 @@ export default function NavBar() {
       <div className="navbar-links">
         {user ? (
           <>
+            {user.is_active && <Link to="/my-games">My Games</Link>}
             <Link to="/profile">Profile</Link>
             <button type="button" className="link-button" onClick={handleLogout}>
               Logout

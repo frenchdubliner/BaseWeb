@@ -8,4 +8,5 @@ admin.site.site_title = "BaseWeb Admin"
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     path("api/auth/", include("apps.accounts.urls")),
+    path("api/listings/", include("apps.listings.urls")),
 ]

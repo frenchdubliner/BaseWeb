@@ -171,6 +171,49 @@ main {
   min-height: 65px;
 }
 
+.form label.checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text);
+  font-size: 1rem;
+}
+
+.form input[type="checkbox"] {
+  width: auto;
+  accent-color: var(--color-primary);
+}
+
+.listings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.listing-card {
+  gap: 0.5rem;
+}
+
+.listing-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 1.1rem;
+}
+
+.listing-flags {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.csv-error-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+}
+
 @media (max-width: 480px) {
   .navbar {
     flex-direction: column;

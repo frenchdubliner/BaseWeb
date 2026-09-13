@@ -7,6 +7,7 @@ import AccountPendingVerification from "./pages/AccountPendingVerification";
 import ForgotPassword from "./pages/ForgotPassword";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import MyGames from "./pages/MyGames";
 import Profile from "./pages/Profile";
 import Register from "./pages/Register";
 import ResetPassword from "./pages/ResetPassword";
@@ -31,6 +32,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-games"
+              element={
+                <ProtectedRoute requireVerified>
+                  <MyGames />
                 </ProtectedRoute>
               }
             />

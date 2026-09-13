@@ -18,7 +18,12 @@ export default function Home() {
           {!user.is_active && (
             <p className="form-hint">Your account is still pending email verification.</p>
           )}
-          <Link className="button" to="/profile">
+          {user.is_active && (
+            <Link className="button" to="/my-games">
+              Manage your games
+            </Link>
+          )}
+          <Link className="button button-secondary" to="/profile">
             Go to your profile
           </Link>
         </div>

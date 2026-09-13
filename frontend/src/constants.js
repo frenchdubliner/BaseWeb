@@ -10,6 +10,46 @@ export const PAYMENT_PREFERENCES = [
   { value: "cash_40", label: "40% of sale value in cash" },
 ];
 
+export const GAME_CONDITIONS = [
+  {
+    value: "new_in_shrink",
+    label: "New in Shrink",
+    description: "Original shrink wrap. Never opened.",
+  },
+  {
+    value: "like_new",
+    label: "Like New",
+    description: "Pieces unpunched, cards wrapped, never played.",
+  },
+  {
+    value: "very_good",
+    label: "Very Good",
+    description: "Pieces punched, sorted, rarely or never played. No discernible wear.",
+  },
+  {
+    value: "good",
+    label: "Good",
+    description: "Played but well maintained, pieces unsorted, box shows signs of use.",
+  },
+  {
+    value: "fair",
+    label: "Fair",
+    description: "Discernible wear. Box/book show minor damage and have been slightly marked.",
+  },
+  {
+    value: "poor",
+    label: "Poor",
+    description: "Worn but playable. Box/book show damage and/or have been significantly marked.",
+  },
+];
+
+export const PET_EXPOSURE_OPTIONS = [
+  { value: "", label: "None" },
+  { value: "cat", label: "Cat" },
+  { value: "dog", label: "Dog" },
+  { value: "multiple", label: "Multiple pets" },
+];
+
 export function extractErrorMessage(error) {
   const data = error?.response?.data;
   if (!data) return "Something went wrong. Please try again.";

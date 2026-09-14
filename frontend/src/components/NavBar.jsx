@@ -20,6 +20,9 @@ export default function NavBar() {
         {user ? (
           <>
             {user.is_active && <Link to="/my-games">My Games</Link>}
+            {user.is_staff && <Link to="/admin/users">Users</Link>}
+            {user.is_staff && <Link to="/admin/games">Games</Link>}
+            {user.is_staff && <Link to="/admin/convention">Convention</Link>}
             <Link to="/profile">Profile</Link>
             <button type="button" className="link-button" onClick={handleLogout}>
               Logout

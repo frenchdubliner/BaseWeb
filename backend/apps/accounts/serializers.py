@@ -97,13 +97,51 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "dropoff_location",
             "payment_preference",
             "is_active",
+            "is_staff",
             "mfa_enabled",
             "date_joined",
         ]
-        read_only_fields = ["id", "email", "is_active", "mfa_enabled", "date_joined"]
+        read_only_fields = ["id", "email", "is_active", "is_staff", "mfa_enabled", "date_joined"]
 
     def validate_phone_number(self, value):
         return validate_international_phone_number(value)
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    """
+    Used by the admin-only user management endpoints. Deliberately does not
+    expose is_staff/is_superuser as writable - granting elevated roles stays
+    confined to the Django admin panel, which has its own audit trail via
+    LogEntry. is_active is writable so an admin can manually verify a user.
+    """
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "phone_number",
+            "dropoff_location",
+            "payment_preference",
+            "is_active",
+            "is_staff",
+            "date_joined",
+        ]
+        read_only_fields = ["id", "is_staff", "date_joined"]
+
+    def validate_phone_number(self, value):
+        return validate_international_phone_number(value)
+
+    def validate_email(self, value):
+        value = value.lower().strip()
+        qs = User.objects.filter(email=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("An account with this email already exists.")
+        return value
 
 
 class ResendVerificationSerializer(CaptchaMixin, serializers.Serializer):

@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from rest_framework import exceptions, generics, status
+from rest_framework import exceptions, generics, mixins, status, viewsets
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,6 +17,7 @@ from apps.security.utils import get_client_ip
 from .emails import send_password_reset_email, send_verification_email
 from .permissions import IsVerified
 from .serializers import (
+    AdminUserSerializer,
     LoginSerializer,
     PasswordChangeSerializer,
     PasswordResetConfirmSerializer,
@@ -278,3 +279,61 @@ class UserAdminDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAdminUser]
     queryset = User.objects.all()
     lookup_field = "pk"
+
+
+class AdminUserViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    Admin-only user directory: list every user (with filters) and edit
+    their profile information. Deliberately does not support create or
+    delete - accounts are created through registration, and role changes
+    stay in the Django admin panel.
+    """
+
+    serializer_class = AdminUserSerializer
+    permission_classes = [IsAdminUser]
+    queryset = User.objects.all().order_by("-date_joined")
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        params = self.request.query_params
+        email = params.get("email")
+        first_name = params.get("first_name")
+        last_name = params.get("last_name")
+
+        if email:
+            qs = qs.filter(email__icontains=email)
+        if first_name:
+            qs = qs.filter(first_name__icontains=first_name)
+        if last_name:
+            qs = qs.filter(last_name__icontains=last_name)
+        return qs
+
+    def list(self, request, *args, **kwargs):
+        # phone_number is encrypted at rest (see apps.common.encryption), so
+        # it cannot be filtered at the database level - filter in Python
+        # after decryption instead.
+        users = list(self.get_queryset())
+        phone = request.query_params.get("phone_number")
+        if phone:
+            phone = phone.strip()
+            users = [u for u in users if phone in (u.phone_number or "")]
+        serializer = self.get_serializer(users, many=True)
+        return Response(serializer.data)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        AuditLog.objects.create(
+            event_type=AuditLog.EventType.ADMIN_ACTION,
+            actor=self.request.user,
+            target_user=instance,
+            ip_address=get_client_ip(self.request),
+            metadata={
+                "action": "user_updated_via_admin_panel",
+                "fields": list(self.request.data.keys()),
+            },
+        )

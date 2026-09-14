@@ -11,5 +11,6 @@ python-decouple==3.8
 cryptography==42.0.8
 argon2-cffi==23.1.0
 requests==2.32.3
+reportlab==5.0.1
 gunicorn==22.0.0
 whitenoise==6.7.0

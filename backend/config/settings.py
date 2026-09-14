@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.security",
     "apps.listings",
+    "apps.convention",
 ]
 
 AUTH_USER_MODEL = "accounts.User"

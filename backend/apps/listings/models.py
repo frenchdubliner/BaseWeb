@@ -63,6 +63,16 @@ class GameListing(models.Model):
         help_text=_("Leave blank if the game was not exposed to any pets."),
     )
     comments = models.CharField(_("comments"), max_length=64, blank=True)
+    printed = models.BooleanField(
+        _("printed"),
+        default=False,
+        help_text=_(
+            "Set automatically when an admin prints this listing's price tag. "
+            "Admin-only - never exposed to or editable by the listing's owner, "
+            "including via CSV import. Once True, only an admin can edit or "
+            "delete the listing."
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -369,18 +369,22 @@ export default function MyGames() {
               {listing.pet_exposure && <li>Pet exposure: {petExposureLabel(listing.pet_exposure)}</li>}
             </ul>
             {listing.comments && <p className="form-hint">&quot;{listing.comments}&quot;</p>}
-            <div>
-              <button type="button" className="button" onClick={() => startEdit(listing)}>
-                Edit
-              </button>
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => handleDelete(listing.id)}
-              >
-                Delete
-              </button>
-            </div>
+            {listing.can_edit ? (
+              <div>
+                <button type="button" className="button" onClick={() => startEdit(listing)}>
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => handleDelete(listing.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            ) : (
+              <p className="form-hint">This listing can no longer be edited.</p>
+            )}
           </div>
         ))}
       </div>

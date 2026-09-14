@@ -62,3 +62,22 @@ export function extractErrorMessage(error) {
   }
   return "Something went wrong. Please try again.";
 }
+
+/**
+ * Like extractErrorMessage, but for requests made with responseType:
+ * "blob" - axios can't auto-parse an error body in that mode, so a JSON
+ * error response arrives as an opaque Blob instead of a parsed object.
+ */
+export async function extractBlobErrorMessage(error) {
+  const data = error?.response?.data;
+  if (data instanceof Blob) {
+    try {
+      const text = await data.text();
+      const parsed = JSON.parse(text);
+      return parsed.detail || text;
+    } catch {
+      return "Something went wrong. Please try again.";
+    }
+  }
+  return extractErrorMessage(error);
+}

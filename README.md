@@ -258,6 +258,72 @@ issue a certificate for `localhost` or a bare IP address).
    0 3 * * * cd /opt/baseweb && docker compose run --rm certbot renew --quiet && docker compose exec nginx nginx -s reload
    ```
 
+### Backing up and restoring the database
+
+**Docker / production (PostgreSQL)**
+
+The `db` service already has `POSTGRES_USER`/`POSTGRES_DB` set in its own
+environment (from `DATABASE_USER`/`DATABASE_NAME` in `.env`), so a dump
+command run via `docker compose exec` can reference them directly without
+retyping credentials:
+
+```bash
+docker compose exec db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
+    > "backup-$(date +%Y%m%d-%H%M%S).sql"
+```
+
+This produces a plain-SQL dump (human-readable, portable across Postgres
+versions) containing the full schema and all data - `.gitignore` already
+excludes `.env` and the SQLite files, but a backup file like this should
+never be committed either; keep it somewhere separate (off-server storage,
+encrypted, etc.).
+
+To restore it - **onto a freshly created, empty database** (e.g. setting
+up a new server from a backup):
+
+```bash
+docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < backup-20260101-030000.sql
+```
+
+To restore **over an existing database that already has data in it**, the
+tables from the dump would otherwise collide with the ones already there -
+drop and recreate the schema first, then restore:
+
+```bash
+docker compose exec db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+    -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < backup-20260101-030000.sql
+```
+
+`DROP SCHEMA ... CASCADE` deletes every table and all their data first -
+there is no undo. Only run it when the restore itself is the intent, and
+take a fresh backup of the current state first if there's any doubt.
+
+If the backup is older than the running code, apply any migrations that
+were added since it was taken:
+
+```bash
+docker compose exec backend python manage.py migrate
+```
+
+Automate backups the same way as certificate renewal - a host crontab
+entry, with a retention cleanup so old backups don't accumulate forever:
+
+```bash
+# crontab -e
+0 2 * * * mkdir -p /opt/baseweb/backups && cd /opt/baseweb && docker compose exec db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > /opt/baseweb/backups/backup-$(date +\%Y\%m\%d).sql && find /opt/baseweb/backups -name '*.sql' -mtime +30 -delete
+```
+
+**Local development (SQLite)**
+
+The dev database is a single file - back it up and restore it by copying
+it (stop `manage.py runserver` first so nothing is mid-write):
+
+```bash
+cp backend/db.sqlite3 backend/db.sqlite3.bak   # backup
+cp backend/db.sqlite3.bak backend/db.sqlite3   # restore
+```
+
 ## Security implementation notes
 
 - **Custom User model** (`apps/accounts/models.py`): email as username,
@@ -312,8 +378,84 @@ issue a certificate for `localhost` or a bare IP address).
   code (`very_good`) or its plain-English label (`Very Good`) for
   `condition`/`pet_exposure`, and tolerant boolean parsing
   (`TRUE`/`yes`/`1`/blank) for the checkbox columns.
+- **Admin management UI** (`is_staff` only, gated by `AdminRoute` on the
+  frontend and `IsAdminUser` on every endpoint below - a non-admin gets
+  redirected client-side and 403s server-side either way):
+  - `/admin/users` (`GET`/`PATCH /api/auth/admin/users/`): every user
+    account, filterable by `email`, `first_name`, `last_name` (DB-level
+    `icontains`) and `phone_number` (filtered in Python after decryption,
+    since phone numbers are encrypted at rest and can't be queried at the
+    DB level - see `apps/common/encryption.py`). Editing is limited to
+    profile fields plus `is_active` (so an admin can manually verify a
+    user); `is_staff`/`is_superuser` are read-only here by design - role
+    changes stay in the Django admin panel, which has its own audit trail.
+  - `/admin/games` (`GET`/`PATCH`/`DELETE /api/listings/admin/`): every
+    listing from every user (not owner-scoped, unlike the regular
+    endpoint), filterable by `id`, owner `email`/`first_name`/`last_name`,
+    and `dropoff_location`. Supports edit and delete; `owner` itself is
+    read-only (reassigning a listing to a different user is out of
+    scope).
+  - Both edits and deletes here write an `AuditLog` entry
+    (`ADMIN_ACTION`) - edits made through the Django admin panel are
+    already covered separately via the `LogEntry` signal, but these API
+    routes bypass that panel entirely, so they log explicitly instead.
+  - Implementation note: both admin route groups use `SimpleRouter`, not
+    `DefaultRouter` - two `DefaultRouter`s sharing a `urls.py` each
+    generate their own "API root" view bound to the empty path, and
+    whichever is listed first silently shadows the other's list/create
+    route. Hit this once during development; `SimpleRouter` sidesteps it
+    by not generating that view at all.
+- **Convention settings** (`apps/convention`): a single global convention
+  name, `GET`/`PATCH /api/convention/`, admin-only. Same `SingletonModel`
+  pattern as `apps/security`'s config models - there's always exactly one
+  row, created on first access with the default name `PAXE2026` if no
+  admin has changed it yet. Frontend page: `/admin/convention`.
+- **Price tag PDF export** (`apps/listings/pdf.py`): `GET
+  /api/listings/admin/<id>/print/` (admin-only) renders a single listing
+  as a 2in x 3in price-tag PDF (convention name + game ID top right,
+  game name, price, condition with its description, then every detail
+  the seller entered) using `reportlab` - chosen over WeasyPrint/wkhtmltopdf
+  specifically to avoid system-level Cairo/Pango dependencies in the
+  Docker image. Long text is word-wrapped and, if it still doesn't fit,
+  shrunk and then ellipsized rather than silently dropped or left to
+  overflow the fixed page size - a single unbroken "word" wider than the
+  tag (a real bug caught by rendering sample output during development,
+  not just by tests) is now hard-clamped to width for the same reason.
+  Frontend: a "Print" button per row on `/admin/games` downloads the file.
+  `GET /api/listings/admin/print-all/` (same admin-only permission) takes
+  the identical filter query params as the list endpoint and returns one
+  PDF with one page per matching listing, via a shared `_draw_tag(canvas,
+  listing, convention_name)` helper so the single- and multi-page paths
+  can never drift apart from each other; capped at `MAX_PRINT_ALL` (500)
+  listings per request. Frontend: "Print all filtered" next to the filter
+  toggle on `/admin/games`, sending whatever filters are currently
+  applied to the table (not whatever's typed but not yet applied).
+- **`printed` lock** (`GameListing.printed`, default `False`): set to
+  `True` automatically the first time either print action runs for a
+  listing. Deliberately excluded from `GameListingSerializer` entirely
+  (not just marked read-only) so it can never appear in - or be set
+  through - anything the owner touches: their own create/list/retrieve/
+  update responses, or CSV import (the column doesn't exist in the
+  template and is silently ignored if present in an uploaded file,
+  since `normalize_row()` only ever copies a fixed whitelist of known
+  columns into the data it hands to the serializer). Once `True`, the
+  owner's own `GameListingViewSet.perform_update`/`perform_destroy`
+  raise `PermissionDenied` - with a message that itself never says
+  "printed" ("This listing can no longer be edited/deleted."), since even
+  an error string counts as exposing the attribute to its owner.
+  `AdminGameListingSerializer` exposes the real `printed` field (read-only;
+  only the print actions set it, not a direct edit) and
+  `AdminGameListingViewSet` accepts it as a `?printed=true|false` filter.
+  Admins can still edit/delete printed listings without restriction - the
+  lock applies only to the owner-facing endpoint.
 
-## Two separate `.env` files - don't mix them up
+  The owner-facing `GameListingSerializer` does expose one derived,
+  intentionally-named field: `can_edit` (`not printed`, computed in
+  `get_can_edit()`) - a capability flag, not the underlying reason, so the
+  frontend can hide the Edit/Delete buttons entirely once a listing is
+  printed (`/my-games` shows a neutral "This listing can no longer be
+  edited." note instead) without ever naming or exposing the `printed`
+  attribute itself.
 
 - **`backend/.env`** - local (non-Docker) development. `python-manage.py`
   runs from `backend/` read this one.

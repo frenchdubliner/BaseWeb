@@ -1,7 +1,14 @@
 from django.urls import path
+from rest_framework.routers import SimpleRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from . import views
+
+# SimpleRouter, not DefaultRouter: avoids an auto-generated "API root" view
+# that isn't needed here and could shadow other routes (see the comment in
+# apps.listings.urls, which hit exactly that collision).
+admin_router = SimpleRouter()
+admin_router.register("admin/users", views.AdminUserViewSet, basename="admin-user")
 
 urlpatterns = [
     path("register/", views.RegisterView.as_view(), name="register"),
@@ -15,4 +22,4 @@ urlpatterns = [
     path("password/change/", views.PasswordChangeView.as_view(), name="password-change"),
     path("profile/", views.ProfileView.as_view(), name="profile"),
     path("users/<int:pk>/", views.UserAdminDetailView.as_view(), name="user-admin-detail"),
-]
+] + admin_router.urls

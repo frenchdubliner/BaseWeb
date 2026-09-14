@@ -14,7 +14,7 @@ export default function NavBar() {
   return (
     <nav className="navbar">
       <Link to="/" className="navbar-brand">
-        BaseWeb
+        Battleground Used Games
       </Link>
       <div className="navbar-links">
         {user ? (

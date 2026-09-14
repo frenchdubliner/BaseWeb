@@ -75,7 +75,7 @@ def parse_csv_file(file_obj) -> list[dict]:
     return list(reader)
 
 
-TEMPLATE_CSV = """# BaseWeb Game Listing Import Template
+TEMPLATE_CSV = """# Battleground Used Games - Listing Import Template
 #
 # HOW THIS WORKS
 # Each row below (other than comments and the header) becomes one game

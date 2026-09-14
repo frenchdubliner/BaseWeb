@@ -2,8 +2,8 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
-admin.site.site_header = "BaseWeb Administration"
-admin.site.site_title = "BaseWeb Admin"
+admin.site.site_header = "Battleground Used Games Administration"
+admin.site.site_title = "Battleground Used Games Admin"
 
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),

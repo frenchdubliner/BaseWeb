@@ -8,7 +8,6 @@ export default function Home() {
   return (
     <div className="page page-narrow">
       <h1>Welcome to Battleground Used Games</h1>
-      <p>A production-grade starting point with secure authentication built in.</p>
 
       {user ? (
         <div className="card">

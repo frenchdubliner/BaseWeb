@@ -457,6 +457,29 @@ cp backend/db.sqlite3.bak backend/db.sqlite3   # restore
   edited." note instead) without ever naming or exposing the `printed`
   attribute itself.
 
+- **`received` toggle** (`GameListing.received`, default `False`):
+  whether the physical game has actually arrived at the drop-off location.
+  Same owner-invisibility as `printed` (excluded from
+  `GameListingSerializer` entirely - never in a response, never settable,
+  including via CSV), but unlike `printed` it's a direct, reversible admin
+  action rather than something only the print actions set: `received` is
+  a normal writable field on `AdminGameListingSerializer`, toggled via a
+  plain `PATCH /api/listings/admin/<id>/` with `{"received": true|false}` -
+  no dedicated endpoint needed. On `/admin/games`, a button to the left of
+  Edit shows "Not Received" / "Received" reflecting the current state and
+  flips it on click.
+
+  Both this and the "Print" button update the on-screen list immediately
+  from the API response (`setListings` merging the returned row into
+  local state) rather than requiring a manual page reload - `handlePrint`
+  and `handlePrintAll` previously downloaded the PDF but never updated
+  local state, so the "Printed" column would silently stay stale until
+  the next reload; fixed alongside adding `received` since both statuses
+  have the same live-update requirement. `AdminGameListingViewSet` also
+  accepts `?received=true|false` as a filter (combinable with `?printed=`
+  and the rest), with a matching "Received" dropdown next to "Printed" in
+  the `/admin/games` filter panel.
+
 - **`backend/.env`** - local (non-Docker) development. `python-manage.py`
   runs from `backend/` read this one.
 - **`.env`** (repo root) - used only by `docker compose` (`env_file: .env`

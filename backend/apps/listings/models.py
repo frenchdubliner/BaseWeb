@@ -73,6 +73,17 @@ class GameListing(models.Model):
             "delete the listing."
         ),
     )
+    received = models.BooleanField(
+        _("received"),
+        default=False,
+        help_text=_(
+            "Whether the physical game has been received at the drop-off "
+            "location. Admin-only - never exposed to or editable by the "
+            "listing's owner, including via CSV import; toggled directly "
+            "by an admin, unlike `printed` which is only ever set by the "
+            "print actions."
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

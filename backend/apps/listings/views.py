@@ -147,6 +147,7 @@ class AdminGameListingViewSet(
         last_name = params.get("last_name")
         dropoff_location = params.get("dropoff_location")
         printed = params.get("printed")
+        received = params.get("received")
 
         if game_id:
             try:
@@ -163,6 +164,8 @@ class AdminGameListingViewSet(
             qs = qs.filter(owner__dropoff_location__icontains=dropoff_location)
         if printed is not None and printed != "":
             qs = qs.filter(printed=printed.lower() in ("true", "1", "yes"))
+        if received is not None and received != "":
+            qs = qs.filter(received=received.lower() in ("true", "1", "yes"))
         return qs
 
     def perform_update(self, serializer):

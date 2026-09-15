@@ -16,6 +16,7 @@ const emptyFilters = {
   last_name: "",
   dropoff_location: "",
   printed: "",
+  received: "",
 };
 
 function conditionLabel(value) {
@@ -142,6 +143,20 @@ export default function AdminGames() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+      // Reflect the now-printed status immediately - no page reload needed.
+      setListings((prev) => prev.map((item) => (item.id === id ? { ...item, printed: true } : item)));
+    } catch (err) {
+      setLoadError(extractErrorMessage(err));
+    }
+  };
+
+  const handleToggleReceived = async (listing) => {
+    setLoadError("");
+    try {
+      const { data } = await listingsClient.patch(`/admin/${listing.id}/`, {
+        received: !listing.received,
+      });
+      setListings((prev) => prev.map((item) => (item.id === listing.id ? data : item)));
     } catch (err) {
       setLoadError(extractErrorMessage(err));
     }
@@ -163,6 +178,9 @@ export default function AdminGames() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+      // print-all covers every currently-listed (filtered) game - reflect
+      // that immediately rather than waiting on a reload.
+      setListings((prev) => prev.map((item) => ({ ...item, printed: true })));
     } catch (err) {
       setLoadError(await extractBlobErrorMessage(err));
     } finally {
@@ -237,6 +255,14 @@ export default function AdminGames() {
               <option value="">Any</option>
               <option value="true">Printed</option>
               <option value="false">Not printed</option>
+            </select>
+          </label>
+          <label>
+            Received
+            <select name="received" value={filters.received} onChange={handleFilterChange}>
+              <option value="">Any</option>
+              <option value="true">Received</option>
+              <option value="false">Not received</option>
             </select>
           </label>
           <div>
@@ -368,54 +394,65 @@ export default function AdminGames() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th>ID</th>
               <th>Game</th>
               <th>Price</th>
               <th>Condition</th>
               <th>Owner</th>
-              <th>Dropoff</th>
               <th>Printed</th>
-              <th></th>
+              <th className="admin-table-actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
             {listings.map((listing) => (
               <tr key={listing.id}>
-                <td>{listing.id}</td>
-                <td>{listing.game_name}</td>
+                <td>
+                  {listing.game_name}
+                  <br />
+                  <span className="form-hint">#{listing.id}</span>
+                </td>
                 <td>${Number(listing.price).toFixed(2)}</td>
                 <td>{conditionLabel(listing.condition)}</td>
                 <td>
                   {listing.owner_first_name} {listing.owner_last_name}
                   <br />
-                  <span className="form-hint">{listing.owner_email}</span>
+                  <span className="form-hint">
+                    {listing.owner_email} · {listing.owner_dropoff_location}
+                  </span>
                 </td>
-                <td>{listing.owner_dropoff_location}</td>
                 <td>{listing.printed ? "Yes" : "No"}</td>
-                <td>
-                  <button type="button" className="button" onClick={() => startEdit(listing)}>
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="button button-secondary"
-                    onClick={() => handlePrint(listing.id)}
-                  >
-                    Print
-                  </button>
-                  <button
-                    type="button"
-                    className="button button-secondary"
-                    onClick={() => handleDelete(listing.id)}
-                  >
-                    Delete
-                  </button>
+                <td className="admin-table-actions-col">
+                  <div className="admin-table-actions">
+                    <button
+                      type="button"
+                      className={listing.received ? "button-sm button-secondary" : "button-sm"}
+                      onClick={() => handleToggleReceived(listing)}
+                    >
+                      {listing.received ? "Received" : "Not Received"}
+                    </button>
+                    <button type="button" className="button-sm" onClick={() => startEdit(listing)}>
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="button-sm button-secondary"
+                      onClick={() => handlePrint(listing.id)}
+                    >
+                      Print
+                    </button>
+                    <button
+                      type="button"
+                      className="button-sm button-secondary"
+                      onClick={() => handleDelete(listing.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
             {!loading && listings.length === 0 && (
               <tr>
-                <td colSpan={8}>No games match these filters.</td>
+                <td colSpan={6}>No games match these filters.</td>
               </tr>
             )}
           </tbody>

@@ -66,7 +66,11 @@ class AdminGameListingSerializer(GameListingSerializer):
             "owner_last_name",
             "owner_dropoff_location",
             "printed",
+            "received",
         ]
         # printed is admin-visible but not admin-editable here - it's only
         # ever set by the print/print-all actions, never by a direct edit.
+        # received IS admin-editable (that's the whole point of the toggle
+        # button), it's just excluded from GameListingSerializer entirely,
+        # same as printed, so the owner never sees or sets either one.
         read_only_fields = GameListingSerializer.Meta.read_only_fields + ["owner", "printed"]

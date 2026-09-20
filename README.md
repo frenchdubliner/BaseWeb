@@ -326,6 +326,19 @@ cp backend/db.sqlite3.bak backend/db.sqlite3   # restore
 
 ## Security implementation notes
 
+- **CSP on the SPA itself** (`nginx/nginx.conf`, `location /`): the built
+  React app's own `index.html`/JS/CSS are served directly by nginx and
+  never pass through Django, so `django-csp`'s middleware never runs for
+  them - discovered because the page that actually renders the
+  Turnstile/reCAPTCHA widget had no `Content-Security-Policy` header at
+  all. Nginx now sets the same policy directly on that location, scoped
+  to it alone so proxied `/api/`/admin responses keep using Django's own
+  header rather than getting a redundant second one. (Verified this
+  wasn't the cause of a real "Captcha failed to load" report by A/B
+  testing full registration attempts with the header present vs. removed
+  - identical outcome either way, so it was safe to add and unrelated to
+  that specific incident. See the "Anti-bot" note below for what
+  actually explains that class of failure.)
 - **Custom User model** (`apps/accounts/models.py`): email as username,
   required profile fields, `is_active=False` until email verification.
 - **Encryption at rest**: phone numbers are encrypted with Fernet, keyed
@@ -343,7 +356,16 @@ cp backend/db.sqlite3.bak backend/db.sqlite3   # restore
   resend-verification.
 - **Anti-bot**: Cloudflare Turnstile primary, Google reCAPTCHA fallback
   (`apps/common/captcha.py`); skipped automatically when no secret key is
-  configured (e.g. local dev).
+  configured (e.g. local dev). **Turnstile site keys are domain-restricted
+  in the Cloudflare dashboard** - if the widget shows "Captcha failed to
+  load" on a real deployment despite the correct site key being baked
+  into the build, check that the exact hostname (e.g.
+  `battleground.yuziva.com`, plus `www.` if used) is added to that site
+  key's allowed Domains list in Cloudflare. This is easy to miss because
+  Cloudflare automatically allow-lists `localhost`/`127.0.0.1` for every
+  site key, so local testing can never catch a missing production domain
+  - the first real request from the actual domain is often the first
+  time this gets exercised at all.
 - **Geo/IP restrictions**: `apps/security` middleware, configurable via
   Django admin (whitelist/blacklist for both), enforced before
   authentication; every block is written to `AuditLog`.

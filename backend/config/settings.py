@@ -30,7 +30,15 @@ ADMIN_URL = env("ADMIN_URL", default="admin/")
 if not ADMIN_URL.endswith("/"):
     ADMIN_URL = ADMIN_URL + "/"
 
-FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
+_FRONTEND_URL_RAW = env("FRONTEND_URL", default="http://localhost:5173")
+# FRONTEND_URL may be a single URL or a comma-separated list (e.g. an http
+# and https variant during a TLS transition, or a bare domain plus www.).
+# FRONTEND_URL itself stays a single canonical URL - used for building
+# links in emails, where only one URL makes sense - and is always the
+# first entry; FRONTEND_URLS is the full parsed list, used anywhere
+# multiple allowed origins genuinely make sense (CORS, CSRF, CSP).
+FRONTEND_URLS = [u.strip() for u in _FRONTEND_URL_RAW.split(",") if u.strip()]
+FRONTEND_URL = FRONTEND_URLS[0]
 
 # ---------------------------------------------------------------------------
 # Applications
@@ -199,8 +207,8 @@ else:
 # CORS / CSRF
 # ---------------------------------------------------------------------------
 if IS_PRODUCTION:
-    CORS_ALLOWED_ORIGINS = [FRONTEND_URL]
-    CSRF_TRUSTED_ORIGINS = [FRONTEND_URL]
+    CORS_ALLOWED_ORIGINS = FRONTEND_URLS
+    CSRF_TRUSTED_ORIGINS = FRONTEND_URLS
 else:
     CORS_ALLOWED_ORIGINS = env_list(
         "CORS_ALLOWED_ORIGINS",
@@ -252,7 +260,7 @@ CSP_SCRIPT_SRC = ("'self'", "https://challenges.cloudflare.com", "https://www.go
 CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
 CSP_IMG_SRC = ("'self'", "data:")
 CSP_FONT_SRC = ("'self'",)
-CSP_CONNECT_SRC = ("'self'", FRONTEND_URL, "https://challenges.cloudflare.com", "https://www.google.com")
+CSP_CONNECT_SRC = ("'self'", *FRONTEND_URLS, "https://challenges.cloudflare.com", "https://www.google.com")
 CSP_FRAME_SRC = ("https://challenges.cloudflare.com", "https://www.google.com")
 CSP_OBJECT_SRC = ("'none'",)
 CSP_BASE_URI = ("'self'",)

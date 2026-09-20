@@ -2,7 +2,23 @@ import axios from "axios";
 
 import { clearTokens, getTokens, setTokens } from "./tokens";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const _RAW_API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Unlike FRONTEND_URL (parsed server-side, comma-separated values allowed),
+// VITE_API_URL is baked into this bundle as-is at build time with no
+// parsing anywhere - there is exactly one place the frontend calls home to.
+// If it's accidentally set to a comma-separated list (an easy mistake given
+// FRONTEND_URL's different rule), fail soft by using just the first entry
+// and say so loudly, rather than silently building a malformed base URL
+// that breaks every single request with no useful error.
+const API_URL = _RAW_API_URL.split(",")[0].trim();
+if (_RAW_API_URL.includes(",")) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    `VITE_API_URL is set to multiple comma-separated values ("${_RAW_API_URL}"). ` +
+      `It must be a single URL - using only the first one ("${API_URL}"). ` +
+      "Fix VITE_API_URL in your .env and rebuild."
+  );
+}
 
 let refreshPromise = null;
 

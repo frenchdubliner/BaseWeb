@@ -188,6 +188,8 @@ export default function AdminGames() {
     }
   };
 
+  const editingListing = editingId ? listings.find((item) => item.id === editingId) : null;
+
   return (
     <div className="page page-wide">
       <h1>All Games</h1>
@@ -376,6 +378,13 @@ export default function AdminGames() {
               onChange={handleEditChange}
             />
           </label>
+
+          {editingListing?.received && (
+            <p className="form-hint">
+              Received on {new Date(editingListing.received_at).toLocaleString()}
+              {editingListing.received_by_name && ` by ${editingListing.received_by_name}`}
+            </p>
+          )}
 
           {formError && <p className="form-error">{formError}</p>}
 

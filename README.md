@@ -282,7 +282,7 @@ To restore it - **onto a freshly created, empty database** (e.g. setting
 up a new server from a backup):
 
 ```bash
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < backup-20260101-030000.sql
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < backup-20260101-030000.sql
 ```
 
 To restore **over an existing database that already has data in it**, the
@@ -290,9 +290,9 @@ tables from the dump would otherwise collide with the ones already there -
 drop and recreate the schema first, then restore:
 
 ```bash
-docker compose exec db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-    -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < backup-20260101-030000.sql
+docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+    -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"'
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < backup-20260101-030000.sql
 ```
 
 `DROP SCHEMA ... CASCADE` deletes every table and all their data first -

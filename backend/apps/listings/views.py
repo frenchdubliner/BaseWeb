@@ -1,6 +1,7 @@
 import csv
 
 from django.http import HttpResponse
+from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -169,7 +170,16 @@ class AdminGameListingViewSet(
         return qs
 
     def perform_update(self, serializer):
+        previously_received = serializer.instance.received
         listing = serializer.save()
+        if listing.received and not previously_received:
+            listing.received_at = timezone.now()
+            listing.received_by = self.request.user
+            listing.save(update_fields=["received_at", "received_by"])
+        elif not listing.received and previously_received:
+            listing.received_at = None
+            listing.received_by = None
+            listing.save(update_fields=["received_at", "received_by"])
         AuditLog.objects.create(
             event_type=AuditLog.EventType.ADMIN_ACTION,
             actor=self.request.user,

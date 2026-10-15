@@ -57,6 +57,7 @@ class AdminGameListingSerializer(GameListingSerializer):
     owner_first_name = serializers.CharField(source="owner.first_name", read_only=True)
     owner_last_name = serializers.CharField(source="owner.last_name", read_only=True)
     owner_dropoff_location = serializers.CharField(source="owner.dropoff_location", read_only=True)
+    received_by_name = serializers.SerializerMethodField()
 
     class Meta(GameListingSerializer.Meta):
         fields = GameListingSerializer.Meta.fields + [
@@ -67,10 +68,25 @@ class AdminGameListingSerializer(GameListingSerializer):
             "owner_dropoff_location",
             "printed",
             "received",
+            "received_at",
+            "received_by_name",
         ]
         # printed is admin-visible but not admin-editable here - it's only
         # ever set by the print/print-all actions, never by a direct edit.
         # received IS admin-editable (that's the whole point of the toggle
         # button), it's just excluded from GameListingSerializer entirely,
         # same as printed, so the owner never sees or sets either one.
-        read_only_fields = GameListingSerializer.Meta.read_only_fields + ["owner", "printed"]
+        # received_at/received_by are set automatically by the view
+        # whenever received changes (see AdminGameListingViewSet.
+        # perform_update) - never directly editable through this field.
+        read_only_fields = GameListingSerializer.Meta.read_only_fields + [
+            "owner",
+            "printed",
+            "received_at",
+        ]
+
+    def get_received_by_name(self, obj):
+        if not obj.received_by:
+            return ""
+        full_name = f"{obj.received_by.first_name} {obj.received_by.last_name}".strip()
+        return full_name or obj.received_by.email

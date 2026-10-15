@@ -49,6 +49,12 @@ class ReceivedFieldVisibilityTests(APITestCase):
         listing.refresh_from_db()
         self.assertFalse(listing.received)
 
+    def test_received_at_and_received_by_not_in_owner_responses(self):
+        listing = GameListing.objects.create(owner=self.owner, game_name="Catan", price=25, condition="good")
+        response = self.client.get(reverse("game-listing-detail", args=[listing.pk]))
+        self.assertNotIn("received_at", response.data)
+        self.assertNotIn("received_by_name", response.data)
+
     def test_template_does_not_mention_received(self):
         self.assertNotIn("received", TEMPLATE_CSV.lower())
 
@@ -126,6 +132,37 @@ class AdminReceivedToggleTests(APITestCase):
         self.listing.save(update_fields=["printed"])
         response = self.client.patch(self.detail_url, {"received": True}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_toggling_received_true_records_timestamp_and_admin(self):
+        response = self.client.patch(self.detail_url, {"received": True}, format="json")
+        self.assertIsNotNone(response.data["received_at"])
+        self.assertEqual(response.data["received_by_name"], "Jane Doe")
+        self.listing.refresh_from_db()
+        self.assertIsNotNone(self.listing.received_at)
+        self.assertEqual(self.listing.received_by, self.admin)
+
+    def test_toggling_received_false_clears_timestamp_and_admin(self):
+        self.client.patch(self.detail_url, {"received": True}, format="json")
+        response = self.client.patch(self.detail_url, {"received": False}, format="json")
+        self.assertIsNone(response.data["received_at"])
+        self.assertEqual(response.data["received_by_name"], "")
+        self.listing.refresh_from_db()
+        self.assertIsNone(self.listing.received_at)
+        self.assertIsNone(self.listing.received_by)
+
+    def test_received_by_name_falls_back_to_email_when_no_name(self):
+        self.admin.first_name = ""
+        self.admin.last_name = ""
+        self.admin.save(update_fields=["first_name", "last_name"])
+        response = self.client.patch(self.detail_url, {"received": True}, format="json")
+        self.assertEqual(response.data["received_by_name"], "admin@example.com")
+
+    def test_re_editing_other_fields_does_not_change_received_tracking(self):
+        first_response = self.client.patch(self.detail_url, {"received": True}, format="json")
+        second_response = self.client.patch(self.detail_url, {"comments": "shelf B"}, format="json")
+        self.assertEqual(second_response.data["received_at"], first_response.data["received_at"])
+        self.listing.refresh_from_db()
+        self.assertEqual(self.listing.received_by, self.admin)
 
 
 class AdminReceivedFilterTests(APITestCase):

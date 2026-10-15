@@ -84,6 +84,29 @@ class GameListing(models.Model):
             "print actions."
         ),
     )
+    received_at = models.DateTimeField(
+        _("received at"),
+        null=True,
+        blank=True,
+        help_text=_(
+            "When `received` was last toggled on. Set automatically by the "
+            "view, not directly editable - cleared again if `received` is "
+            "toggled back off."
+        ),
+    )
+    received_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_("received by"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="received_listings",
+        help_text=_(
+            "Which admin last toggled `received` on. Set automatically by "
+            "the view, not directly editable - cleared again if `received` "
+            "is toggled back off."
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

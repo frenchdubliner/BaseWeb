@@ -137,7 +137,7 @@ class AdminGameListingViewSet(
 
     serializer_class = AdminGameListingSerializer
     permission_classes = [IsAdminUser]
-    queryset = GameListing.objects.select_related("owner").order_by("-created_at")
+    queryset = GameListing.objects.select_related("owner", "received_by").order_by("-created_at")
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -267,4 +267,70 @@ class AdminGameListingViewSet(
 
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = 'attachment; filename="price-tags.pdf"'
+        return response
+
+    @action(detail=False, methods=["get"], url_path="export", url_name="export")
+    def export_csv(self, request):
+        """
+        Downloads a CSV of every listing matching the currently applied
+        filters (same query params as the list endpoint) - admin-only,
+        unlike the owner-facing template/upload CSVs, and includes the
+        admin-only columns (owner details, printed/received tracking).
+        """
+        listings = self.get_queryset()
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="games-export.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "id",
+                "game_name",
+                "price",
+                "condition",
+                "has_missing_pieces",
+                "missing_pieces_description",
+                "smoking_household",
+                "musty_smell",
+                "pet_exposure",
+                "comments",
+                "owner_email",
+                "owner_first_name",
+                "owner_last_name",
+                "owner_dropoff_location",
+                "printed",
+                "received",
+                "received_at",
+                "received_by",
+                "created_at",
+            ]
+        )
+        for listing in listings:
+            received_by_name = ""
+            if listing.received_by:
+                full_name = f"{listing.received_by.first_name} {listing.received_by.last_name}".strip()
+                received_by_name = full_name or listing.received_by.email
+            writer.writerow(
+                [
+                    listing.id,
+                    listing.game_name,
+                    listing.price,
+                    listing.condition,
+                    listing.has_missing_pieces,
+                    listing.missing_pieces_description,
+                    listing.smoking_household,
+                    listing.musty_smell,
+                    listing.pet_exposure,
+                    listing.comments,
+                    listing.owner.email,
+                    listing.owner.first_name,
+                    listing.owner.last_name,
+                    listing.owner.dropoff_location,
+                    listing.printed,
+                    listing.received,
+                    listing.received_at.isoformat() if listing.received_at else "",
+                    received_by_name,
+                    listing.created_at.isoformat(),
+                ]
+            )
         return response

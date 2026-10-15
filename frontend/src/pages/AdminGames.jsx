@@ -38,6 +38,7 @@ export default function AdminGames() {
   const [saving, setSaving] = useState(false);
 
   const [printingAll, setPrintingAll] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const loadListings = (params) => {
     setLoading(true);
@@ -188,6 +189,29 @@ export default function AdminGames() {
     }
   };
 
+  const handleExportCsv = async () => {
+    setLoadError("");
+    setExporting(true);
+    try {
+      const response = await listingsClient.get("/admin/export/", {
+        params: appliedParams,
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: "text/csv" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "games-export.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setLoadError(await extractBlobErrorMessage(err));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const editingListing = editingId ? listings.find((item) => item.id === editingId) : null;
 
   return (
@@ -209,6 +233,14 @@ export default function AdminGames() {
           disabled={printingAll || loading || listings.length === 0}
         >
           {printingAll ? "Preparing PDF..." : "🖨️ Print all filtered"}
+        </button>
+        <button
+          type="button"
+          className="button button-secondary"
+          onClick={handleExportCsv}
+          disabled={exporting || loading || listings.length === 0}
+        >
+          {exporting ? "Preparing CSV..." : "⬇️ Export CSV"}
         </button>
       </div>
 

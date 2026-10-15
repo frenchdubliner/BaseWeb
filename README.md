@@ -146,6 +146,49 @@ in whatever firewall/security group sits in front of it.
 5. **Create your admin account** (see above), then get a certificate
    (next section) before advertising the site publicly.
 
+### Deploying code updates (pulling in new changes)
+
+Whenever you pull new code onto a server that's already running (`git
+pull`, or re-copying via `rsync`), what you need to re-run depends on
+*what* changed - doing too little is the usual cause of "I don't see the
+new feature" even though the code is there:
+
+- **Backend code changed** (views, serializers, models, etc.) but no new
+  migration: just rebuild and restart the backend.
+  ```bash
+  docker compose build backend
+  docker compose up -d backend
+  ```
+- **A migration was added** (a new/changed model field - check
+  `backend/apps/*/migrations/` for a file newer than your last deploy):
+  apply it after restarting the backend, every time, even if the admin
+  panel still *looks* like it loads fine without it:
+  ```bash
+  docker compose exec backend python manage.py migrate
+  ```
+  Skipping this doesn't always fail loudly - a new field that's only
+  read/written conditionally (e.g. only once you click a specific button)
+  can silently 500 only on that action, while everything else keeps
+  working.
+- **Frontend code changed** (anything under `frontend/src/`) or
+  `VITE_*`/`ADMIN_URL` env vars changed: these are baked into the static
+  bundle at *build* time, so editing the file or `.env` alone changes
+  nothing until you rebuild the image that bakes them in:
+  ```bash
+  docker compose build nginx
+  docker compose up -d nginx
+  ```
+- **nginx.conf changed** (not the frontend code, the proxy config
+  itself): same rebuild as above - it's baked into the same image.
+
+When in doubt, it's always safe (if slower) to just rebuild and restart
+everything:
+```bash
+docker compose build
+docker compose up -d
+docker compose exec backend python manage.py migrate
+```
+
 ### Free SSL certificate (Let's Encrypt)
 
 The stack ships with everything needed to obtain and use a free

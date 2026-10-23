@@ -271,7 +271,21 @@ CSP_FRAME_ANCESTORS = ("'none'",)
 # ---------------------------------------------------------------------------
 AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = timedelta(minutes=15)
-AXES_LOCKOUT_PARAMETERS = ["ip_address", "username"]
+# A nested list is one *combined* key (lock this exact ip+username pair
+# together); a flat list is multiple *independent* keys (lock on ip_address
+# alone OR username alone). With the flat form, several customers sharing
+# one IP - e.g. shop/convention WiFi - would all get locked out by a single
+# other customer mistyping their own password, since the ip-only bucket
+# doesn't care which username was being attempted.
+AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
+# Our User model's USERNAME_FIELD is "email" (see apps/accounts/models.py),
+# and that's the keyword SimpleJWT's authenticate() call actually passes
+# through - but axes' own "username" credential key defaults to literally
+# "username", which is never present. Without this, axes resolves every
+# login attempt's username as None regardless of who's logging in, so the
+# "username" half of the combined key above is a no-op and every attempt
+# from the same IP still collapses into one shared bucket.
+AXES_USERNAME_FORM_FIELD = "email"
 AXES_RESET_ON_SUCCESS = True
 AXES_ENABLE_ADMIN = True
 

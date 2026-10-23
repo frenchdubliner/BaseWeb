@@ -32,6 +32,29 @@ class AxesLockoutTests(APITestCase):
         )
         self.assertNotEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_other_user_on_same_ip_not_locked_out_by_unrelated_failures(self):
+        # Regression guard: AXES_LOCKOUT_PARAMETERS must combine ip+username
+        # into one key, not treat them as independent lockout buckets - a
+        # flat ["ip_address", "username"] would lock out every account on a
+        # shared IP (e.g. shop/convention WiFi) once *any* account on that
+        # IP racks up failures, which is exactly the bug this guards against.
+        make_user(email="innocent@example.com", is_active=True)
+        for _ in range(5):
+            self.client.post(
+                self.login_url,
+                {"email": "locktarget@example.com", "password": "WrongPass!1"},
+                format="json",
+            )
+
+        # Same test-client IP, different account, correct password - must
+        # succeed despite locktarget's IP-visible failures above.
+        response = self.client.post(
+            self.login_url,
+            {"email": "innocent@example.com", "password": "Sup3rSecret!42"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
 
 class RegistrationThrottleTests(APITestCase):
     def setUp(self):

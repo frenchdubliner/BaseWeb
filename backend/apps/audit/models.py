@@ -11,6 +11,10 @@ class LoginAudit(models.Model):
         LOGIN_FAILURE = "login_failure", _("Login failure")
         LOGOUT = "logout", _("Logout")
 
+    class Reason(models.TextChoices):
+        LOCKED_OUT = "locked_out", _("Locked out (too many failed attempts)")
+        INVALID_CREDENTIALS = "invalid_credentials", _("Invalid email or password")
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -20,6 +24,12 @@ class LoginAudit(models.Model):
     )
     email_attempted = models.EmailField(blank=True)
     action = models.CharField(max_length=20, choices=Action.choices)
+    reason = models.CharField(
+        max_length=20,
+        choices=Reason.choices,
+        blank=True,
+        help_text=_("Only set for login_failure rows - why the attempt was rejected."),
+    )
     success = models.BooleanField(default=False)
     timestamp = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)

@@ -5,8 +5,8 @@ from .models import AuditLog, LoginAudit
 
 @admin.register(LoginAudit)
 class LoginAuditAdmin(admin.ModelAdmin):
-    list_display = ("timestamp", "action", "email_attempted", "user", "ip_address", "country", "city")
-    list_filter = ("action", "country")
+    list_display = ("timestamp", "action", "reason", "email_attempted", "user", "ip_address", "country", "city")
+    list_filter = ("action", "reason", "country")
     search_fields = ("email_attempted", "ip_address", "user__email")
     readonly_fields = [f.name for f in LoginAudit._meta.fields]
 

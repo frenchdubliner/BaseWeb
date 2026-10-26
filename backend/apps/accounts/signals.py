@@ -20,7 +20,32 @@ def handle_login_failed(sender, credentials, request=None, **kwargs):
         ip_address=get_client_ip(request),
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:512],
         action=LoginAudit.Action.LOGIN_FAILURE,
+        reason=_login_failure_reason(request),
     )
+
+
+def _login_failure_reason(request):
+    """
+    Best-effort reason for a login failure, for admin diagnostics only -
+    never exposed to the client (SimpleJWT returns one generic message
+    either way, to avoid leaking which emails are registered).
+
+    Unverified (is_active=False) accounts are NOT a failure reason here -
+    apps.accounts.backends.EmailBackend deliberately lets them authenticate
+    successfully; they're restricted per-endpoint afterward (IsVerified),
+    not at login. So the only two ways authenticate() actually fails are
+    a locked-out ip+email pair, or genuinely wrong credentials.
+
+    `axes` is listed before `apps.accounts` in INSTALLED_APPS, so its own
+    `user_login_failed` receiver - which sets `request.axes_locked_out` when
+    this attempt is rejected due to lockout - runs and updates `request`
+    before this receiver does.
+    """
+    from apps.audit.models import LoginAudit
+
+    if getattr(request, "axes_locked_out", False):
+        return LoginAudit.Reason.LOCKED_OUT
+    return LoginAudit.Reason.INVALID_CREDENTIALS
 
 
 @receiver(pre_save, sender=User)

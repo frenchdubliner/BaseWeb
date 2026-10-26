@@ -160,13 +160,21 @@ class PasswordResetRequestSerializer(CaptchaMixin, serializers.Serializer):
         return attrs
 
 
-class PasswordResetConfirmSerializer(CaptchaMixin, serializers.Serializer):
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    # No captcha here, unlike PasswordResetRequestSerializer above: this
+    # step is already gated by possession of a signed, single-use,
+    # short-lived token emailed to the account (see
+    # apps.accounts.tokens.make_password_reset_token) plus its own
+    # "password-reset" throttle scope - a captcha would add no real
+    # anti-abuse protection, and the frontend's confirm page never
+    # rendered a CaptchaWidget to produce one anyway, so this endpoint was
+    # unconditionally failing in any environment with captcha enforcement
+    # turned on.
     token = serializers.CharField()
     new_password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        self._verify_captcha(attrs)
         if attrs["new_password"] != attrs["confirm_password"]:
             raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
         return attrs

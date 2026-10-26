@@ -6,6 +6,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.throttling import ScopedRateThrottle
 
+from apps.audit.models import AuditLog
+
 from .helpers import make_user, registration_payload
 
 
@@ -73,3 +75,26 @@ class RegistrationThrottleTests(APITestCase):
                 )
                 statuses.append(response.status_code)
         self.assertIn(status.HTTP_429_TOO_MANY_REQUESTS, statuses)
+
+    def test_rate_limit_exceeded_is_logged_to_audit_log(self):
+        # A 429 is rejected in APIView.initial(), before the view method
+        # runs, so this can only be caught at the exception-handler layer
+        # (apps.security.exceptions.audit_logging_exception_handler) - not
+        # by any view-level logging code, which never executes for these.
+        with patch.dict(ScopedRateThrottle.THROTTLE_RATES, {"register": "2/min"}):
+            for i in range(3):
+                self.client.post(
+                    self.url, registration_payload(email=f"auditthrottle{i}@example.com"), format="json"
+                )
+
+        entry = AuditLog.objects.filter(event_type=AuditLog.EventType.RATE_LIMIT_EXCEEDED).latest("timestamp")
+        self.assertEqual(entry.metadata["throttle_scope"], "register")
+        self.assertEqual(entry.metadata["path"], self.url)
+        self.assertIn("wait_seconds", entry.metadata)
+
+    def test_requests_within_the_limit_are_not_logged(self):
+        with patch.dict(ScopedRateThrottle.THROTTLE_RATES, {"register": "5/min"}):
+            self.client.post(self.url, registration_payload(email="withinlimit@example.com"), format="json")
+        self.assertFalse(
+            AuditLog.objects.filter(event_type=AuditLog.EventType.RATE_LIMIT_EXCEEDED).exists()
+        )

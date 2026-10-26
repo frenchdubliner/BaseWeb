@@ -310,6 +310,7 @@ REST_FRAMEWORK = {
         "listings-bulk-upload": "20/hour",
     },
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    "EXCEPTION_HANDLER": "apps.security.exceptions.audit_logging_exception_handler",
 }
 
 SIMPLE_JWT = {

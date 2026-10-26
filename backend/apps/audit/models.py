@@ -67,6 +67,7 @@ class AuditLog(models.Model):
         GEO_BLOCK = "geo_block", _("Geo block")
         IP_BLOCK = "ip_block", _("IP block")
         ADMIN_ACTION = "admin_action", _("Admin action")
+        RATE_LIMIT_EXCEEDED = "rate_limit_exceeded", _("Rate limit exceeded")
 
     event_type = models.CharField(max_length=32, choices=EventType.choices)
     actor = models.ForeignKey(

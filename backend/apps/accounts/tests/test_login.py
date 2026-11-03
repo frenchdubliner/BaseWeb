@@ -38,6 +38,20 @@ class LoginTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertFalse(response.data["user"]["is_active"])
 
+    def test_login_normalizes_email_case_and_whitespace(self):
+        # Registration stores email.lower().strip() - login must normalize
+        # the submitted value the same way before authenticate()'s
+        # exact-match lookup, or the exact email you registered with
+        # (before normalization) fails to log in.
+        make_user(email="normalize@example.com", is_active=True)
+        response = self.client.post(
+            self.login_url,
+            {"email": " Normalize@EXAMPLE.com ", "password": "Sup3rSecret!42"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data["user"]["email"], "normalize@example.com")
+
     def test_wrong_password_rejected_and_audited(self):
         make_user(email="active2@example.com", is_active=True)
         response = self.client.post(

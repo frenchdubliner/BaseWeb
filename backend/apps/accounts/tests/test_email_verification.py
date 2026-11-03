@@ -42,6 +42,19 @@ class EmailVerificationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 1)
 
+    def test_resend_verification_normalizes_email_case_and_whitespace(self):
+        # The view looks this up with User.objects.get(email=email) -
+        # without normalizing the submitted value the same way
+        # registration normalized the stored one, this would silently
+        # match nothing and send no email, indistinguishable from the
+        # "unknown email" case below.
+        make_user(email="pending4@example.com", is_active=False)
+        response = self.client.post(
+            self.resend_url, {"email": " Pending4@EXAMPLE.com "}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+
     def test_resend_verification_does_not_leak_account_existence(self):
         response = self.client.post(
             self.resend_url, {"email": "doesnotexist@example.com"}, format="json"

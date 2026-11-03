@@ -78,6 +78,14 @@ class RegisterSerializer(CaptchaMixin, serializers.ModelSerializer):
 
 
 class LoginSerializer(CaptchaMixin, TokenObtainPairSerializer):
+    def validate_email(self, value):
+        # Registration stores email lower().strip() (see RegisterSerializer
+        # below) - normalize the submitted value the same way before
+        # authenticate() does its exact-match lookup, or "John@Example.com"
+        # (the very string you registered with) fails to log in because the
+        # stored row is "john@example.com".
+        return value.lower().strip()
+
     def validate(self, attrs):
         self._verify_captcha(attrs)
         data = super().validate(attrs)
@@ -147,6 +155,12 @@ class AdminUserSerializer(serializers.ModelSerializer):
 class ResendVerificationSerializer(CaptchaMixin, serializers.Serializer):
     email = serializers.EmailField()
 
+    def validate_email(self, value):
+        # Same reasoning as LoginSerializer.validate_email above - the view
+        # looks this up with User.objects.get(email=email), which needs the
+        # same normalization registration applied before storing it.
+        return value.lower().strip()
+
     def validate(self, attrs):
         self._verify_captcha(attrs)
         return attrs
@@ -154,6 +168,12 @@ class ResendVerificationSerializer(CaptchaMixin, serializers.Serializer):
 
 class PasswordResetRequestSerializer(CaptchaMixin, serializers.Serializer):
     email = serializers.EmailField()
+
+    def validate_email(self, value):
+        # Same reasoning as LoginSerializer.validate_email above - the view
+        # looks this up with User.objects.get(email=email), which needs the
+        # same normalization registration applied before storing it.
+        return value.lower().strip()
 
     def validate(self, attrs):
         self._verify_captcha(attrs)

@@ -23,6 +23,14 @@ class PasswordResetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 1)
 
+    def test_reset_request_normalizes_email_case_and_whitespace(self):
+        make_user(email="reset6@example.com")
+        response = self.client.post(
+            self.request_url, {"email": " Reset6@EXAMPLE.com "}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+
     def test_reset_request_silent_for_unknown_email(self):
         response = self.client.post(
             self.request_url, {"email": "unknown@example.com"}, format="json"

@@ -1,6 +1,8 @@
 from unittest.mock import patch
 
+from axes.models import AccessAttempt
 from django.core.cache import cache
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -56,6 +58,24 @@ class AxesLockoutTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+    @override_settings(TRUSTED_PROXY_IPS=["127.0.0.1"])
+    def test_records_real_client_ip_not_the_proxys(self):
+        # Regression guard: without AXES_CLIENT_IP_CALLABLE, axes falls back
+        # to raw REMOTE_ADDR, which behind nginx is always the nginx
+        # container's own internal IP - identical for every request,
+        # regardless of who's really connecting. The test client's
+        # REMOTE_ADDR defaults to 127.0.0.1, so trusting it as a proxy here
+        # and sending an X-Forwarded-For header simulates exactly that
+        # "real client behind a trusted reverse proxy" scenario.
+        self.client.post(
+            self.login_url,
+            {"email": "locktarget@example.com", "password": "WrongPass!1"},
+            format="json",
+            HTTP_X_FORWARDED_FOR="203.0.113.5",
+        )
+        attempt = AccessAttempt.objects.latest("attempt_time")
+        self.assertEqual(attempt.ip_address, "203.0.113.5")
 
 
 class RegistrationThrottleTests(APITestCase):

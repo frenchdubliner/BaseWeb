@@ -286,6 +286,14 @@ AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
 # "username" half of the combined key above is a no-op and every attempt
 # from the same IP still collapses into one shared bucket.
 AXES_USERNAME_FORM_FIELD = "email"
+# Without this, axes falls back to raw REMOTE_ADDR (since django-ipware
+# isn't installed) - which, behind nginx, is always the nginx container's
+# own internal Docker IP, identical for every request regardless of who's
+# actually connecting. Routing through the same TrustedProxyMiddleware-based
+# resolver everything else uses (LoginAudit, GeoIP, IP restriction) keeps
+# one source of truth for "what is the real client IP" app-wide, instead of
+# axes being the one place with a different, wrong answer.
+AXES_CLIENT_IP_CALLABLE = "apps.security.utils.get_client_ip"
 AXES_RESET_ON_SUCCESS = True
 AXES_ENABLE_ADMIN = True
 
